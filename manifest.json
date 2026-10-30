@@ -1,0 +1,12 @@
+
+{
+  "name": "D' Wings Cafe POS",
+  "short_name": "D Wings POS",
+  "description": "D Wings Cafe Point of Sale",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f4f4f4",
+  "theme_color": "#171717",
+  "orientation": "portrait"
+}
