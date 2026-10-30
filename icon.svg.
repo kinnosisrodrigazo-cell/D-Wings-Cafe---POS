@@ -1,0 +1,13 @@
+
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="100" fill="#171717"/>
+  <text x="256" y="220" text-anchor="middle"
+        font-family="Arial" font-size="112" font-weight="bold"
+        fill="#f2c94c">D'W</text>
+  <path d="M110 270 H402" stroke="#f2c94c" stroke-width="10"/>
+  <text x="256" y="340" text-anchor="middle"
+        font-family="Arial" font-size="45" font-weight="bold"
+        fill="white">WINGS</text>
+  <text x="256" y="390" text-anchor="middle"
+        font-family="Arial" font-size="27" fill="#f2c94c">CAFE POS</text>
+</svg>
