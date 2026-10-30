@@ -1,0 +1,262 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#171717">
+<title>D' Wings Cafe POS</title>
+<link rel="manifest" href="manifest.json">
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#f4f4f4;color:#202020;font-family:Arial,sans-serif}
+header{background:#171717;color:white;padding:16px;display:flex;justify-content:space-between;align-items:center;gap:10px}
+header h1{font-size:20px;margin:0}
+header small{color:#f4c542}
+button,input,select{font:inherit}
+button{border:0;border-radius:8px;padding:11px 14px;cursor:pointer;font-weight:bold}
+.dark{background:#252525;color:white}
+.gold{background:#f2c94c;color:#171717}
+.light{background:#e9e9e9;color:#222}
+.danger{background:#b83232;color:white}
+main{padding:14px;max-width:1200px;margin:auto}
+.toolbar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+input,select{padding:12px;border:1px solid #ccc;border-radius:8px;background:white;min-width:0}
+#search{flex:1;min-width:180px}
+.categories{display:flex;gap:7px;overflow-x:auto;padding:3px 0 12px}
+.categories button{white-space:nowrap;background:#ddd}
+.categories button.active{background:#171717;color:white}
+.layout{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(280px,1fr);gap:14px}
+.panel{background:white;border-radius:12px;padding:14px;box-shadow:0 2px 8px #0000000b}
+.panel h2{font-size:18px;margin:0 0 12px}
+.products{display:grid;grid-template-columns:repeat(auto-fill,minmax(145px,1fr));gap:9px}
+.product{border:1px solid #e3e3e3;background:white;text-align:left;min-height:88px;padding:12px}
+.product strong{display:block;font-size:13px;line-height:1.3}
+.product span{display:block;margin-top:8px;color:#8a6500;font-size:16px}
+.cart-row{display:flex;justify-content:space-between;align-items:center;gap:8px;border-bottom:1px solid #eee;padding:10px 0}
+.cart-row small{display:block;color:#777;margin-top:4px}
+.qty{display:flex;align-items:center;gap:6px}
+.qty button{padding:6px 10px}
+.total-line{display:flex;justify-content:space-between;margin:9px 0}
+.total{font-size:24px;font-weight:bold}
+.full{width:100%;margin-top:8px}
+.muted{color:#777;font-size:12px}
+.tabs{display:flex;gap:7px;flex-wrap:wrap;margin:0 0 12px}
+.tabs button.active{background:#171717;color:white}
+.hidden{display:none!important}
+table{width:100%;border-collapse:collapse;font-size:13px}
+td,th{text-align:left;padding:9px 6px;border-bottom:1px solid #eee}
+#notice{margin:8px 0;color:#276b39;font-size:13px}
+@media(max-width:760px){.layout{grid-template-columns:1fr}.products{grid-template-columns:repeat(2,minmax(0,1fr))}header h1{font-size:17px}}
+@media print{
+ body{background:white}
+ body *{visibility:hidden}
+ #receipt,#receipt *{visibility:visible}
+ #receipt{position:absolute;left:0;top:0;width:58mm;padding:3mm;font-size:11px;color:black}
+ #receipt h2{text-align:center;font-size:16px}
+}
+</style>
+</head>
+<body>
+<header>
+ <div><h1>D' WINGS CAFE</h1><small>POINT OF SALE</small></div>
+ <div id="userLabel">Cashier</div>
+</header>
+
+<main>
+ <section id="login" class="panel">
+  <h2>Staff Login</h2>
+  <p class="muted">Choose your role and enter your PIN.</p>
+  <select id="role">
+   <option value="Cashier">Cashier</option>
+   <option value="Owner">Owner</option>
+  </select>
+  <input id="pin" type="password" inputmode="numeric" placeholder="Enter PIN" style="width:100%;margin-top:8px">
+  <button class="gold full" onclick="login()">LOGIN</button>
+  <p class="muted">Demo PINs: Cashier 1111 · Owner 1234. Change these before using the POS for real sales.</p>
+ </section>
+
+ <section id="app" class="hidden">
+  <div class="tabs">
+   <button class="active" id="tabSale" onclick="showTab('sale')">Cashier / Sale</button>
+   <button id="tabHistory" onclick="showTab('history')">Sales History</button>
+   <button id="tabOwner" class="hidden" onclick="showTab('owner')">Owner Dashboard</button>
+   <button class="light" onclick="logout()">Log out</button>
+  </div>
+
+  <section id="saleView">
+   <div class="toolbar">
+    <input id="search" placeholder="Search product..." oninput="renderProducts()">
+   </div>
+   <div class="categories" id="categories"></div>
+   <div class="layout">
+    <div class="panel">
+     <h2>Menu</h2>
+     <div id="products" class="products"></div>
+    </div>
+    <div class="panel">
+     <h2>Current Order</h2>
+     <div id="cart"></div>
+     <hr>
+     <div class="total-line"><span>Subtotal</span><strong id="subtotal">₱0.00</strong></div>
+     <div class="total-line">
+      <label for="discount">Discount (₱)</label>
+      <input id="discount" type="number" min="0" value="0" style="width:105px" oninput="renderCart()">
+     </div>
+     <div class="total-line total"><span>TOTAL</span><span id="grandTotal">₱0.00</span></div>
+     <label class="muted" for="payment">Payment method</label>
+     <select id="payment" class="full">
+      <option>Cash</option><option>GCash</option><option>Other</option>
+     </select>
+     <input id="cashReceived" type="number" min="0" placeholder="Cash received (if cash)" class="full">
+     <div class="total-line"><span>Change</span><strong id="change">₱0.00</strong></div>
+     <button class="gold full" onclick="completeSale()">COMPLETE SALE</button>
+     <button class="light full" onclick="clearCart()">CLEAR ORDER</button>
+     <p id="notice"></p>
+    </div>
+   </div>
+  </section>
+
+  <section id="historyView" class="panel hidden">
+   <h2>Sales History</h2>
+   <div id="history"></div>
+  </section>
+
+  <section id="ownerView" class="panel hidden">
+   <h2>Owner Dashboard</h2>
+   <div id="summary"></div>
+   <h3>Product Price Management</h3>
+   <p class="muted">Change a product's selling price here. Changes are saved on this device.</p>
+   <div id="manageProducts"></div>
+   <button class="dark full" onclick="exportBackup()">EXPORT SALES & PRODUCTS BACKUP</button>
+   <p class="muted">Keep regular backups. Data is stored in this browser on this device, not automatically synced to another device.</p>
+  </section>
+ </section>
+</main>
+
+<div id="receipt" class="hidden"></div>
+
+<script>
+const initialProducts = [
+["WINGS","UNLI 269 WINGS",269],["WINGS","UNLI 299 WINGS",299],
+["WINGS","3PCS CHICKEN",119],["WINGS","3PCS CHICKEN + RICE + DIP",149],
+["WINGS","6PCS CHICKEN",199],["WINGS","6 PCS CHICKEN + RICE + DIP",229],
+["WINGS","9PCS CHICKEN",299],["WINGS","9 PCS CHICKEN + RICE + DIP",329],
+["WINGS","18 PCS CHICKEN",579],["WINGS","24 PCS CHICKEN",749],
+["FRIES","SOUR CREAM",119],["FRIES","DOUBLE BBQ",119],
+["FRIES","DOUBLE CHEESE",119],["FRIES","DOUBLE DUO",139],
+["FRIES","TRIPLE CHEESE",129],["FRIES","CHILI CHEESE",139],
+["FRIES","CHEESY BACON",139],["FRIES","MAPLE BACON",149],
+["FRIES","HAM AND CHEESE",139],["FRIES","PLAIN FRIES",119],
+["FLOATS","CHOCO FLOAT",79],["FLOATS","COKE FLOAT",79],
+["FLOATS","COFFEE FLOAT",89],["FLOATS","OREO FLOAT",89],
+["FLOATS","MATCHA FLOAT",89],["FLOATS","MANGO FLOAT",89],
+["DRINKS","CHOCO BLISS",85],["DRINKS","VANILLA OREO",95],
+["DRINKS","CARAMEL BLISS",85],["DRINKS","MATCHA LATTE",95],
+["DRINKS","OREO BLAST",85],["DRINKS","CARAMEL MATCHA",95],
+["DRINKS","CHOCO OREO",85],["DRINKS","STRAWBERRY MATCHA",95],
+["DRINKS","STRAWBERRY LATTE",90],["DRINKS","OREO MATCHA",95],
+["DRINKS","STRAWBERRY CLOUD",90],["DRINKS","STRAWBERRY OREO",95],
+["EXTRAS","DIP",25],["EXTRAS","RICE",25],["EXTRAS","TAKE OUT BOX",5],
+["SANDWICH","SAUSAGE",89]
+];
+
+let products = JSON.parse(localStorage.getItem("dw_products") || "null") || initialProducts.map((p,i)=>({id:i+1,category:p[0],name:p[1],price:p[2]}));
+let sales = JSON.parse(localStorage.getItem("dw_sales") || "[]");
+let cart = [];
+let activeCategory = "ALL";
+let currentRole = "";
+
+function money(n){return "₱"+Number(n||0).toFixed(2)}
+function save(){localStorage.setItem("dw_products",JSON.stringify(products));localStorage.setItem("dw_sales",JSON.stringify(sales))}
+function login(){
+ const role=document.getElementById("role").value,pin=document.getElementById("pin").value;
+ if((role==="Owner"&&pin==="1234")||(role==="Cashier"&&pin==="1111")){
+  currentRole=role;
+  document.getElementById("login").classList.add("hidden");
+  document.getElementById("app").classList.remove("hidden");
+  document.getElementById("userLabel").textContent=role;
+  document.getElementById("tabOwner").classList.toggle("hidden",role!=="Owner");
+  renderCategories();renderProducts();renderCart();
+ }else alert("Incorrect PIN.");
+}
+function logout(){currentRole="";cart=[];document.getElementById("app").classList.add("hidden");document.getElementById("login").classList.remove("hidden");document.getElementById("pin").value=""}
+function showTab(tab){
+ ["sale","history","owner"].forEach(t=>{
+  document.getElementById(t+"View").classList.toggle("hidden",t!==tab);
+  const b=document.getElementById("tab"+t.charAt(0).toUpperCase()+t.slice(1));
+  if(b)b.classList.toggle("active",t===tab);
+ });
+ if(tab==="history")renderHistory();
+ if(tab==="owner"&&currentRole==="Owner")renderOwner();
+}
+function renderCategories(){
+ const cats=["ALL",...new Set(products.map(p=>p.category))];
+ document.getElementById("categories").innerHTML=cats.map(c=>`<button class="${c===activeCategory?'active':''}" onclick="activeCategory='${c}';renderCategories();renderProducts()">${c}</button>`).join("");
+}
+function renderProducts(){
+ const q=document.getElementById("search").value.toLowerCase();
+ const list=products.filter(p=>(activeCategory==="ALL"||p.category===activeCategory)&&p.name.toLowerCase().includes(q));
+ document.getElementById("products").innerHTML=list.map(p=>`<button class="product" onclick="addToCart(${p.id})"><strong>${p.name}</strong><span>${money(p.price)}</span></button>`).join("")||"No products found.";
+}
+function addToCart(id){
+ const p=products.find(x=>x.id===id),item=cart.find(x=>x.id===id);
+ if(item)item.qty++;else cart.push({...p,qty:1});
+ renderCart();
+}
+function changeQty(id,delta){
+ const item=cart.find(x=>x.id===id);if(!item)return;
+ item.qty+=delta;if(item.qty<=0)cart=cart.filter(x=>x.id!==id);
+ renderCart();
+}
+function subtotal(){return cart.reduce((s,x)=>s+x.price*x.qty,0)}
+function discount(){return Math.min(subtotal(),Math.max(0,Number(document.getElementById("discount").value)||0))}
+function grand(){return subtotal()-discount()}
+function renderCart(){
+ document.getElementById("cart").innerHTML=cart.map(x=>`<div class="cart-row"><div><strong>${x.name}</strong><small>${money(x.price)} each</small></div><div class="qty"><button class="light" onclick="changeQty(${x.id},-1)">−</button><b>${x.qty}</b><button class="light" onclick="changeQty(${x.id},1)">+</button></div></div>`).join("")||'<p class="muted">No items added yet.</p>';
+ document.getElementById("subtotal").textContent=money(subtotal());
+ document.getElementById("grandTotal").textContent=money(grand());
+ const received=Number(document.getElementById("cashReceived").value)||0;
+ document.getElementById("change").textContent=money(document.getElementById("payment").value==="Cash"?Math.max(0,received-grand()):0);
+}
+document.getElementById("cashReceived").addEventListener("input",renderCart);
+document.getElementById("payment").addEventListener("change",renderCart);
+function clearCart(){cart=[];document.getElementById("discount").value=0;document.getElementById("cashReceived").value="";renderCart()}
+function completeSale(){
+ if(!cart.length){alert("Add products first.");return}
+ const total=grand(),payment=document.getElementById("payment").value,received=Number(document.getElementById("cashReceived").value)||0;
+ if(payment==="Cash"&&received<total){alert("Cash received is less than the total.");return}
+ const sale={id:Date.now(),date:new Date().toISOString(),items:cart.map(x=>({...x})),subtotal:subtotal(),discount:discount(),total,payment,received};
+ sales.unshift(sale);save();printReceipt(sale);clearCart();document.getElementById("notice").textContent="Sale saved successfully.";
+}
+function printReceipt(s){
+ const d=new Date(s.date);
+ document.getElementById("receipt").innerHTML=`<h2>D' WINGS CAFE</h2><center>SALES RECEIPT<br>${d.toLocaleString()}</center><hr>${s.items.map(x=>`<div>${x.name}<br>${x.qty} x ${money(x.price)} <span style="float:right">${money(x.qty*x.price)}</span></div>`).join("<hr>")}<hr><p>Subtotal: ${money(s.subtotal)}<br>Discount: ${money(s.discount)}<br><b>TOTAL: ${money(s.total)}</b><br>Payment: ${s.payment}<br>${s.payment==="Cash"?"Cash: "+money(s.received)+"<br>Change: "+money(s.received-s.total):""}</p><center>THANK YOU!</center>`;
+ document.getElementById("receipt").classList.remove("hidden");
+ window.print();
+ document.getElementById("receipt").classList.add("hidden");
+}
+function renderHistory(){
+ document.getElementById("history").innerHTML=sales.map(s=>`<div class="cart-row"><div><strong>${new Date(s.date).toLocaleString()}</strong><small>${s.items.reduce((n,x)=>n+x.qty,0)} items · ${s.payment}</small></div><b>${money(s.total)}</b></div>`).join("")||"No sales recorded yet.";
+}
+function renderOwner(){
+ const today=new Date().toDateString(),todays=sales.filter(s=>new Date(s.date).toDateString()===today);
+ document.getElementById("summary").innerHTML=`<div class="total-line"><span>Today's transactions</span><b>${todays.length}</b></div><div class="total-line total"><span>Today's sales</span><span>${money(todays.reduce((n,s)=>n+s.total,0))}</span></div><div class="total-line"><span>All recorded sales</span><b>${money(sales.reduce((n,s)=>n+s.total,0))}</b></div>`;
+ document.getElementById("manageProducts").innerHTML=products.map(p=>`<div class="cart-row"><div><strong>${p.name}</strong><small>${p.category}</small></div><button class="light" onclick="editPrice(${p.id})">${money(p.price)} · Edit</button></div>`).join("");
+}
+function editPrice(id){
+ if(currentRole!=="Owner")return;
+ const p=products.find(x=>x.id===id),v=prompt("New selling price for "+p.name,p.price);
+ if(v===null)return;
+ const n=Number(v);if(!Number.isFinite(n)||n<0){alert("Enter a valid price.");return}
+ p.price=n;save();renderOwner();renderProducts();
+}
+function exportBackup(){
+ const data={products,sales,exportedAt:new Date().toISOString()};
+ const blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"});
+ const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="d-wings-pos-backup.json";a.click();URL.revokeObjectURL(a.href);
+}
+if("serviceWorker" in navigator){window.addEventListener("load",()=>navigator.serviceWorker.register("sw.js").catch(()=>{}))}
+</script>
+</body>
+</html>
